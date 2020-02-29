@@ -11,6 +11,8 @@ IF audio doesn't work.
 
 ## Install
 
+You need moviepy and numpy.
+
 Download and run `pip install -e .` where setup.py is.
 
 ## How to use
