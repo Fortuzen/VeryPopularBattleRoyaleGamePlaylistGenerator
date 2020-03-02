@@ -1,10 +1,14 @@
 from moviepy.editor import *
+import moviepy.audio.fx.all as afx
+from moviepy.audio.fx.audio_fadein import audio_fadein
+from moviepy.audio.fx.audio_fadeout import audio_fadeout
 import argparse
 import os
 import random
 import copy
 import numpy as np
 import datetime
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Create music playlist")
@@ -13,15 +17,25 @@ def parse_args():
     parser.add_argument("-imagefolder", metavar="folder", type=str, default="images")
     parser.add_argument("-outputfolder", metavar="folder", type=str, default="output")
     parser.add_argument("-outputprefix", metavar="prefix", type=str, default="out_")
-    parser.add_argument("-count", metavar="N", type=int, default=1, help="How many playlist you want to create")
-    parser.add_argument("-infofile", metavar="Bool", type=bool, default=True, help="Create playlist infofile")
-    parser.add_argument("-randomimages", metavar="Bool", type=bool, default=True, help="Pick random images for videos.")
-    parser.add_argument("-saveaudio", metavar="Bool", type=bool, default=False, help="Create audiofile also")
+
+    parser.add_argument("-count", metavar="n", type=int, default=1, help="How many playlist you want to create")
+
+    parser.add_argument("-metafile", metavar="b", type=bool, default=True, help="Create playlist metafile")
+    parser.add_argument("-randomimages", metavar="b", type=bool, default=True, help="Pick random images for videos.")
+    parser.add_argument("-saveaudio", metavar="b", type=bool, default=False, help="Create audiofile also")
+
+    parser.add_argument("-fadein", metavar="f", type=float, default=0.0, help="Add fade in. Seconds.")
+    parser.add_argument("-fadeout", metavar="f", type=float, default=0.0, help="Add fade out. Seconds.")
+    parser.add_argument("-crossfade", metavar="f", type=float, default=0.0, help="Add Crossfade between clips.")
+    parser.add_argument("--fadefirst", type=bool, default=False, help="Fade in first song")
 
     args = parser.parse_args()
     return args
+
+
 # Parse args
 args = parse_args()
+
 
 def load_music(folder):
     files = os.listdir(folder)
@@ -34,10 +48,34 @@ def load_images(folder):
     image_clips = [ImageClip(folder+"/"+file) for file in files]
     return image_clips
 
+# Note! These two separate because otherwise crash happens
+
+
+def fade_audio_clips(clips):
+    """Add fade in and out to songs"""
+    fadein = args.fadein
+    fadeout = args.fadeout
+    for i in range(1, len(clips)):
+        clip = clips[i].fx(audio_fadein, fadein).fx(audio_fadeout, fadeout)
+        clips[i] = clip
+
+
+def crossfade_audio_clips(clips):
+    """Add transition between songs. Note: This merges clips to one!"""
+    crossfade = args.crossfade
+    for i in range(1, len(clips)):
+        clip = clips[i]
+        clips[i] = clip.set_start(clips[i-1].end-crossfade)
+
+    return CompositeAudioClip(clips)
+
 
 def create_music_video(image, music):
     count = args.count
     os.makedirs(args.outputfolder, exist_ok=True)
+
+    # Add fade-in-out to all clips first
+    fade_audio_clips(music)
 
     for i in range(count):
         if not args.randomimages and i >= count:
@@ -45,15 +83,17 @@ def create_music_video(image, music):
         # shallow copy of the music clips
         music_shuffled = copy.copy(music)
         random.shuffle(music_shuffled)
+        # Then crossfade them and combine them to one
+        concat_music = crossfade_audio_clips(music_shuffled)
+        # concat_music = concatenate_audioclips(music_shuffled)
 
-        concat_music = concatenate_audioclips(music_shuffled)
-        #img_index = random.randint(0, len(image)-1) if args.randomimages else i
         temp_image = random.choice(image) if args.randomimages else image[i]
         video = temp_image.set_audio(concat_music)
         video = video.set_duration(concat_music.duration)
+
         # Save playlist info as text
-        if args.infofile:
-            save_playlist_info(music_shuffled, i)
+        if args.metafile:
+            save_playlist_meta(music_shuffled, i)
 
         # Create video
         filepath = "{}/{}{}.mp4".format(args.outputfolder, args.outputprefix, str(i))
@@ -61,8 +101,10 @@ def create_music_video(image, music):
         video.write_videofile(filepath, fps=30, remove_temp=(not args.saveaudio), temp_audiofile=temp_audio_file)
 
 
-def save_playlist_info(music_clips, video_id):
+def save_playlist_meta(music_clips, video_id):
     filepath = "{}/{}{}.txt".format(args.outputfolder, args.outputprefix, str(video_id))
+    # Take fading in account
+    crossfade = args.crossfade
     with open(filepath, "w") as f:
         total_time = 0
         for i in range(len(music_clips)):
@@ -70,16 +112,16 @@ def save_playlist_info(music_clips, video_id):
 
             # time
             rounded_time = round(clip.duration)
+
             start_time = datetime.timedelta(seconds=total_time)
-            end_time = datetime.timedelta(seconds=(total_time + rounded_time))
+            total_time += rounded_time - crossfade
+            end_time = datetime.timedelta(seconds=total_time)
             duration = datetime.timedelta(seconds=rounded_time)
-            total_time += rounded_time
 
             # name
             start_i = clip.filename.find("/")+1
             end_i = clip.filename.rfind(".")
             clip_name = clip.filename[start_i:end_i]
-            print(clip_name)
 
             line = "{} {} {}-{}".format(clip_name, str(duration), start_time, end_time)
             f.write(line+"\n")
@@ -92,8 +134,8 @@ def main():
     create_music_video(images, music)
     print("Done!")
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     print(args)
     main()
 

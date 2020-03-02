@@ -1,6 +1,6 @@
 # VeryPopularBattleRoyaleGamePlaylistGenerator
 
-Create randomized music playlists. Inspired by certain Youtube channels.
+Create randomized music playlists. Inspired by certain Youtube channels. Work in progress!
 
 
 Notes: remove -an option from 
@@ -32,9 +32,9 @@ python -m vpbrgpg -imagefolder images -musicfolder music -outputfolder output -o
  -count 4
 
 ## Todo/Potential features
+* GUI (PyQt5)
 * Better image randomizer
 * Multithreading
-* Audio crossfade
 * Add artist to playlist info
 * Add text(current song/artist)
 * Visualizations
