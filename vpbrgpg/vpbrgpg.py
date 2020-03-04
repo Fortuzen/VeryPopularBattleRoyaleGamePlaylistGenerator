@@ -2,39 +2,18 @@ from moviepy.editor import *
 import moviepy.audio.fx.all as afx
 from moviepy.audio.fx.audio_fadein import audio_fadein
 from moviepy.audio.fx.audio_fadeout import audio_fadeout
-import argparse
 import os
 import random
 import copy
 import numpy as np
 import datetime
 
+import Config
 
-def parse_args():
-    parser = argparse.ArgumentParser(description="Create music playlist")
-
-    parser.add_argument("-musicfolder", metavar="folder", type=str, default="music")
-    parser.add_argument("-imagefolder", metavar="folder", type=str, default="images")
-    parser.add_argument("-outputfolder", metavar="folder", type=str, default="output")
-    parser.add_argument("-outputprefix", metavar="prefix", type=str, default="out_")
-
-    parser.add_argument("-count", metavar="n", type=int, default=1, help="How many playlist you want to create")
-
-    parser.add_argument("-metafile", metavar="b", type=bool, default=True, help="Create playlist metafile")
-    parser.add_argument("-randomimages", metavar="b", type=bool, default=True, help="Pick random images for videos.")
-    parser.add_argument("-saveaudio", metavar="b", type=bool, default=False, help="Create audiofile also")
-
-    parser.add_argument("-fadein", metavar="f", type=float, default=0.0, help="Add fade in. Seconds.")
-    parser.add_argument("-fadeout", metavar="f", type=float, default=0.0, help="Add fade out. Seconds.")
-    parser.add_argument("-crossfade", metavar="f", type=float, default=0.0, help="Add Crossfade between clips.")
-    parser.add_argument("--fadefirst", type=bool, default=False, help="Fade in first song")
-
-    args = parser.parse_args()
-    return args
 
 
 # Parse args
-args = parse_args()
+args = Config.parse_args()
 
 
 def load_music(folder):
